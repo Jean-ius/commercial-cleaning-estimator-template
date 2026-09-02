@@ -5,7 +5,6 @@ import { calculateCommercialEstimate } from './utils/pricingEngine';
 import { Navbar } from './components/Navbar';
 import { CorporateLanding } from './components/landing/CorporateLanding';
 import { CommercialProposalGenerator } from './components/proposal/CommercialProposalGenerator';
-import { Toast } from './components/Toast';
 import { Footer } from './components/Footer';
 
 export const App: React.FC = () => {
@@ -17,19 +16,9 @@ export const App: React.FC = () => {
     return calculateCommercialEstimate(12500, 'corporate_office', 'business_5x', ['carpet_extraction']);
   });
 
-  const [toastMsg, setToastMsg] = useState<string>('');
-  const [toastVisible, setToastVisible] = useState<boolean>(false);
-
-  const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 3500);
-  };
-
   const handleOpenProposalGenerator = (estimate: EstimateResult) => {
     setActiveEstimate(estimate);
     setCurrentView('proposal');
-    triggerToast(`Generated proposal for ${estimate.squareFootage.toLocaleString()} sq ft facility`);
   };
 
   // Scroll to top on view changes
@@ -74,9 +63,6 @@ export const App: React.FC = () => {
           onNavigate={(view) => setCurrentView(view)}
         />
       )}
-
-      {/* 4. Toast Feedback */}
-      <Toast message={toastMsg} isVisible={toastVisible} />
     </div>
   );
 };
