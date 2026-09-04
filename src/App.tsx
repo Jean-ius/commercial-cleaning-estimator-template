@@ -220,6 +220,28 @@ export const App: React.FC = () => {
     // 3. Confirm creation and obtain confirmed Lead ID
     const confirmedLeadId = createRes.leadId || newLead.leadId;
 
+    // 3.5. If an estimate was attached, save estimate specifically with the confirmed Lead ID
+    if (newLead.estimateSnapshot) {
+      const finalAnnualVal = newLead.estimatedValue || newLead.annualContractValue || newLead.estimateSnapshot.annualContractValue;
+      try {
+        await saveEstimateToGoogleSheets(confirmedLeadId, {
+          estimatedValue: finalAnnualVal,
+          monthlyEstimate: newLead.monthlyEstimate || newLead.estimateSnapshot.totalEstimatedMonthlyInvestment,
+          ratePerVisit: newLead.ratePerVisit || newLead.estimateSnapshot.pricePerVisit,
+          annualContractValue: finalAnnualVal,
+          estimatedLaborHours: newLead.estimateSnapshot.hoursPerCleaningVisit,
+          recommendedCrewSize: newLead.estimateSnapshot.recommendedCrewSize,
+          squareFootage: newLead.squareFootage,
+          facilityType: newLead.facilityType,
+          cleaningFrequency: newLead.cleaningFrequency,
+          selectedAddOns: newLead.selectedAddOns,
+          status: 'Estimating'
+        }, brandConfig.googleAppsScriptUrl);
+      } catch (estErr: any) {
+        console.warn('Lead created but estimate save encountered warning:', estErr);
+      }
+    }
+
     // 4. Refresh full leads dataset from Google Sheets to confirm complete persistence
     let finalLead: LeadRecord = { ...newLead, leadId: confirmedLeadId };
     try {
@@ -228,7 +250,12 @@ export const App: React.FC = () => {
         setLeads(fresh.leads);
         const reloaded = fresh.leads.find(l => l.leadId === confirmedLeadId);
         if (reloaded) {
-          finalLead = { ...reloaded, estimateSnapshot: newLead.estimateSnapshot };
+          finalLead = { 
+            ...reloaded, 
+            estimatedValue: newLead.estimatedValue || reloaded.estimatedValue,
+            annualContractValue: newLead.annualContractValue || reloaded.annualContractValue,
+            estimateSnapshot: newLead.estimateSnapshot 
+          };
         }
       } else {
         setLeads(prev => [finalLead, ...prev]);
