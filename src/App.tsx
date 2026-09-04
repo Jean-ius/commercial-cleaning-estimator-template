@@ -118,6 +118,8 @@ export const App: React.FC = () => {
     estimatedValue?: number;
     monthlyEstimate?: number;
     ratePerVisit?: number;
+    discretionaryAdjustmentPercent?: number;
+    recommendedMonthlyRate?: number;
     selectedAddOns?: AddOnServiceId[];
     propertyType?: string;
     specialRequirements?: string;
@@ -235,6 +237,8 @@ export const App: React.FC = () => {
           facilityType: newLead.facilityType,
           cleaningFrequency: newLead.cleaningFrequency,
           selectedAddOns: newLead.selectedAddOns,
+          discretionaryAdjustmentPercent: newLead.discretionaryAdjustmentPercent ?? newLead.estimateSnapshot.discretionaryAdjustmentPercent,
+          recommendedMonthlyRate: newLead.recommendedMonthlyRate ?? newLead.estimateSnapshot.recommendedMonthlyRate,
           status: 'Estimating'
         }, brandConfig.googleAppsScriptUrl);
       } catch (estErr: any) {
@@ -254,6 +258,13 @@ export const App: React.FC = () => {
             ...reloaded, 
             estimatedValue: newLead.estimatedValue || reloaded.estimatedValue,
             annualContractValue: newLead.annualContractValue || reloaded.annualContractValue,
+            discretionaryAdjustmentPercent: newLead.discretionaryAdjustmentPercent,
+            recommendedMonthlyRate: newLead.recommendedMonthlyRate,
+            recommendedPricePerVisit: newLead.recommendedPricePerVisit,
+            recommendedAnnualContractValue: newLead.recommendedAnnualContractValue,
+            finalProposedMonthlyRate: newLead.finalProposedMonthlyRate,
+            finalProposedPricePerVisit: newLead.finalProposedPricePerVisit,
+            finalProposedAnnualContractValue: newLead.finalProposedAnnualContractValue,
             estimateSnapshot: newLead.estimateSnapshot 
           };
         }
@@ -328,6 +339,8 @@ export const App: React.FC = () => {
         facilityType: facilitySpecs.facilityType,
         cleaningFrequency: facilitySpecs.cleaningFrequency,
         selectedAddOns: facilitySpecs.selectedAddOns,
+        discretionaryAdjustmentPercent: estimate.discretionaryAdjustmentPercent,
+        recommendedMonthlyRate: estimate.recommendedMonthlyRate,
         status: targetLead.status === 'New' ? 'Estimating' : targetLead.status
       }, brandConfig.googleAppsScriptUrl);
 
@@ -349,6 +362,13 @@ export const App: React.FC = () => {
         annualContractValue: estimate.annualContractValue,
         monthlyEstimate: estimate.totalEstimatedMonthlyInvestment,
         ratePerVisit: estimate.pricePerVisit,
+        discretionaryAdjustmentPercent: estimate.discretionaryAdjustmentPercent,
+        recommendedMonthlyRate: estimate.recommendedMonthlyRate,
+        recommendedPricePerVisit: estimate.recommendedPricePerVisit,
+        recommendedAnnualContractValue: estimate.recommendedAnnualContractValue,
+        finalProposedMonthlyRate: estimate.finalProposedMonthlyRate,
+        finalProposedPricePerVisit: estimate.finalProposedPricePerVisit,
+        finalProposedAnnualContractValue: estimate.finalProposedAnnualContractValue,
         lastUpdated: new Date().toISOString().split('T')[0],
         estimateSnapshot: estimate
       } : {
@@ -361,6 +381,13 @@ export const App: React.FC = () => {
         estimatedValue: estimate.annualContractValue,
         annualContractValue: estimate.annualContractValue,
         ratePerVisit: estimate.pricePerVisit,
+        discretionaryAdjustmentPercent: estimate.discretionaryAdjustmentPercent,
+        recommendedMonthlyRate: estimate.recommendedMonthlyRate,
+        recommendedPricePerVisit: estimate.recommendedPricePerVisit,
+        recommendedAnnualContractValue: estimate.recommendedAnnualContractValue,
+        finalProposedMonthlyRate: estimate.finalProposedMonthlyRate,
+        finalProposedPricePerVisit: estimate.finalProposedPricePerVisit,
+        finalProposedAnnualContractValue: estimate.finalProposedAnnualContractValue,
         status: (targetLead.status === 'New' ? 'Estimating' : (targetLead.status || 'Estimating')) as LeadStatus,
         lastUpdated: new Date().toISOString().split('T')[0],
         estimateSnapshot: estimate
@@ -419,6 +446,8 @@ export const App: React.FC = () => {
       estimatedValue: estimate.annualContractValue,
       monthlyEstimate: estimate.totalEstimatedMonthlyInvestment,
       ratePerVisit: estimate.pricePerVisit,
+      discretionaryAdjustmentPercent: estimate.discretionaryAdjustmentPercent,
+      recommendedMonthlyRate: estimate.recommendedMonthlyRate,
       propertyType: facilitySectors.find(s => s.id === facilitySpecs.facilityType)?.name || 'Commercial Facility',
       estimateSnapshot: estimate
     });
@@ -430,9 +459,11 @@ export const App: React.FC = () => {
     triggerToast('Saved as Standalone Commercial Estimate!');
   };
 
+  // Reset/Clear active lead so user can start an independent estimate for another company (Requirement 4 & 8)
   const handleClearActiveLead = () => {
     setActiveLead(null);
-    triggerToast('Cleared active lead context. Estimator operating in standalone mode.');
+    setActiveEstimate(calculateCommercialEstimate(12500, 'corporate_office', 'business_5x', ['carpet_extraction'], undefined, 0));
+    triggerToast('Cleared active lead context. Ready for a new blank estimate.');
   };
 
   // Synchronize view transitions with browser URL history (pushState/replaceState)
@@ -543,7 +574,9 @@ export const App: React.FC = () => {
       lead.squareFootage || 12000,
       lead.facilityType || 'corporate_office',
       lead.cleaningFrequency || 'business_5x',
-      lead.selectedAddOns || []
+      lead.selectedAddOns || [],
+      undefined,
+      lead.discretionaryAdjustmentPercent ?? 0
     );
     setActiveEstimate(est);
     navigateToView('estimator', lead.leadId);
@@ -555,7 +588,9 @@ export const App: React.FC = () => {
       lead.squareFootage || 12000,
       lead.facilityType || 'corporate_office',
       lead.cleaningFrequency || 'business_5x',
-      lead.selectedAddOns || []
+      lead.selectedAddOns || [],
+      undefined,
+      lead.discretionaryAdjustmentPercent ?? 0
     );
     setActiveEstimate(est);
     navigateToView('proposal', lead.leadId);
@@ -670,6 +705,31 @@ export const App: React.FC = () => {
             brandConfig={brandConfig}
             activeLead={activeLead}
             onSaveProposal={handleSaveProposal}
+            onUpdateAdjustment={(newAdj) => {
+              const updatedEst = calculateCommercialEstimate(
+                activeEstimate.squareFootage,
+                activeEstimate.sectorId,
+                activeEstimate.frequencyId,
+                activeEstimate.selectedAddOns,
+                undefined,
+                newAdj
+              );
+              setActiveEstimate(updatedEst);
+              if (activeLead) {
+                setActiveLead(prev => prev ? {
+                  ...prev,
+                  discretionaryAdjustmentPercent: newAdj,
+                  estimateSnapshot: updatedEst,
+                  estimatedValue: updatedEst.annualContractValue,
+                  annualContractValue: updatedEst.annualContractValue,
+                  monthlyEstimate: updatedEst.totalEstimatedMonthlyInvestment,
+                  ratePerVisit: updatedEst.pricePerVisit,
+                  finalProposedMonthlyRate: updatedEst.finalProposedMonthlyRate,
+                  finalProposedPricePerVisit: updatedEst.finalProposedPricePerVisit,
+                  finalProposedAnnualContractValue: updatedEst.finalProposedAnnualContractValue
+                } : null);
+              }
+            }}
             onBack={() => navigateToView('sales')}
           />
         )}
