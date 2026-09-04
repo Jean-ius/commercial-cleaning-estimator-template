@@ -345,6 +345,11 @@ export const App: React.FC = () => {
 
       const updatedLead: LeadRecord = refreshedLead ? {
         ...refreshedLead,
+        estimatedValue: estimate.annualContractValue,
+        annualContractValue: estimate.annualContractValue,
+        monthlyEstimate: estimate.totalEstimatedMonthlyInvestment,
+        ratePerVisit: estimate.pricePerVisit,
+        lastUpdated: new Date().toISOString().split('T')[0],
         estimateSnapshot: estimate
       } : {
         ...targetLead,
@@ -680,7 +685,10 @@ export const App: React.FC = () => {
       {/* 4. Modals */}
       <NewLeadModal
         isOpen={isNewLeadModalOpen}
-        onClose={() => setIsNewLeadModalOpen(false)}
+        onClose={() => {
+          setIsNewLeadModalOpen(false);
+          setInitialSpecsForNewLead(undefined);
+        }}
         onCreateLead={handleCreateLead}
         suggestedLeadId={generateNextLeadId()}
         initialEstimateSpecs={initialSpecsForNewLead}
