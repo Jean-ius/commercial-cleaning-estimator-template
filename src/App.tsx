@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ClientBrandConfig, 
   EstimateResult, 
@@ -29,6 +29,33 @@ import {
   updateStatusInGoogleSheets 
 } from './services/googleSheetsService';
 
+export type SystemView = 'sales' | 'estimator' | 'proposal';
+
+function parseUrlState(): { view: SystemView; leadId: string | null } {
+  if (typeof window === 'undefined') {
+    return { view: 'sales', leadId: null };
+  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view')?.toLowerCase();
+    const hash = window.location.hash.replace(/^#/, '').toLowerCase();
+    const leadParam = params.get('lead') || params.get('leadId') || null;
+
+    let view: SystemView = 'sales';
+    if (viewParam === 'estimator' || hash === 'estimator') {
+      view = 'estimator';
+    } else if (viewParam === 'proposal' || hash === 'proposal') {
+      view = 'proposal';
+    } else if (viewParam === 'sales' || hash === 'sales') {
+      view = 'sales';
+    }
+
+    return { view, leadId: leadParam };
+  } catch {
+    return { view: 'sales', leadId: null };
+  }
+}
+
 export const App: React.FC = () => {
   // Brand Configuration with localStorage sync
   const [brandConfig, setBrandConfig] = useState<ClientBrandConfig>(() => {
@@ -56,7 +83,9 @@ export const App: React.FC = () => {
   };
 
   // Enterprise Software View Router: 'sales' (Pipeline CRM) | 'estimator' (Bidding Engine) | 'proposal' (Proposal Studio)
-  const [currentView, setCurrentView] = useState<'sales' | 'estimator' | 'proposal'>('sales');
+  const initialUrlState = parseUrlState();
+  const [currentView, setCurrentView] = useState<SystemView>(initialUrlState.view);
+  const initialLeadIdRef = useRef<string | null>(initialUrlState.leadId);
 
   // Leads CRM State: starts empty for clean product template, reloaded from Google Sheets or localStorage
   const [leads, setLeads] = useState<LeadRecord[]>(() => {
@@ -374,9 +403,86 @@ export const App: React.FC = () => {
     triggerToast('Cleared active lead context. Estimator operating in standalone mode.');
   };
 
+  // Synchronize view transitions with browser URL history (pushState/replaceState)
+  const navigateToView = useCallback((view: SystemView, targetLeadId?: string, replace: boolean = false) => {
+    setCurrentView(view);
+    if (typeof window !== 'undefined') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', view);
+        const resolvedLeadId = targetLeadId !== undefined ? targetLeadId : (view !== 'sales' && activeLead ? activeLead.leadId : undefined);
+        if (resolvedLeadId) {
+          url.searchParams.set('lead', resolvedLeadId);
+        } else {
+          url.searchParams.delete('lead');
+          url.searchParams.delete('leadId');
+        }
+        url.hash = '';
+
+        if (replace) {
+          window.history.replaceState({ view, leadId: resolvedLeadId }, '', url.pathname + url.search);
+        } else {
+          const curParams = new URLSearchParams(window.location.search);
+          if (curParams.get('view') === view && curParams.get('lead') === (resolvedLeadId || null)) {
+            window.history.replaceState({ view, leadId: resolvedLeadId }, '', url.pathname + url.search);
+          } else {
+            window.history.pushState({ view, leadId: resolvedLeadId }, '', url.pathname + url.search);
+          }
+        }
+      } catch (e) {
+        console.warn('URL state push failed:', e);
+      }
+    }
+  }, [activeLead]);
+
+  // Handle native browser Back / Forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const state = parseUrlState();
+      setCurrentView(state.view);
+      if (state.leadId && leads.length > 0) {
+        const match = leads.find(l => l.leadId === state.leadId);
+        if (match) {
+          setActiveLead(match);
+          if (match.estimateSnapshot) {
+            setActiveEstimate(match.estimateSnapshot);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [leads]);
+
+  // If page loads without explicit ?view= parameter, set it cleanly via replaceState
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.location.search.includes('view=')) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', currentView);
+        window.history.replaceState({ view: currentView }, '', url.pathname + url.search);
+      } catch (e) {}
+    }
+  }, []);
+
+  // When leads load from Google Sheets or localStorage, resolve any deep-linked lead ID from URL
+  useEffect(() => {
+    if (initialLeadIdRef.current && leads.length > 0) {
+      const match = leads.find(l => l.leadId === initialLeadIdRef.current);
+      if (match) {
+        setActiveLead(match);
+        if (match.estimateSnapshot) {
+          setActiveEstimate(match.estimateSnapshot);
+        }
+        initialLeadIdRef.current = null;
+      }
+    }
+  }, [leads]);
+
   const handleOpenProposalGenerator = (estimate: EstimateResult) => {
     setActiveEstimate(estimate);
-    setCurrentView('proposal');
+    navigateToView('proposal', activeLead?.leadId);
   };
 
   const handleSaveProposal = async (proposalData: any) => {
@@ -408,7 +514,7 @@ export const App: React.FC = () => {
       lead.selectedAddOns || []
     );
     setActiveEstimate(est);
-    setCurrentView('estimator');
+    navigateToView('estimator', lead.leadId);
   };
 
   const handleOpenProposalForLead = (lead: LeadRecord) => {
@@ -420,7 +526,7 @@ export const App: React.FC = () => {
       lead.selectedAddOns || []
     );
     setActiveEstimate(est);
-    setCurrentView('proposal');
+    navigateToView('proposal', lead.leadId);
   };
 
   // Scroll to top on view changes
@@ -435,7 +541,7 @@ export const App: React.FC = () => {
       {currentView !== 'proposal' && (
         <Navbar
           currentView={currentView}
-          onNavigate={(view) => setCurrentView(view)}
+          onNavigate={(view) => navigateToView(view)}
           brandConfig={brandConfig}
           onOpenNewLeadModal={() => {
             setInitialSpecsForNewLead(undefined);
@@ -500,7 +606,7 @@ export const App: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentView('sales')}
+                  onClick={() => navigateToView('sales')}
                   className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
                 >
                   ← Back to Pipeline CRM
@@ -532,7 +638,7 @@ export const App: React.FC = () => {
             brandConfig={brandConfig}
             activeLead={activeLead}
             onSaveProposal={handleSaveProposal}
-            onBack={() => setCurrentView('sales')}
+            onBack={() => navigateToView('sales')}
           />
         )}
       </main>
