@@ -18,28 +18,28 @@ import {
  */
 
 export const defaultClientBrand: ClientBrandConfig = {
-  companyName: "Apex Commercial Cleaning",
+  companyName: "Your Commercial Cleaning Co.",
   tagline: "Corporate Janitorial & Facility Sanitization Engineered for Zero Disruption",
-  primaryCity: "Dallas, TX",
+  primaryCity: "Your Metro Area",
   serviceAreas: [
-    "Downtown Dallas",
-    "Plano & Frisco",
-    "Irving & Las Colinas",
-    "Fort Worth Commercial District",
-    "Richardson Telecom Corridor"
+    "Downtown Commercial District",
+    "North Business Corridor",
+    "West Technology Park",
+    "East Metro Center",
+    "South Industrial Hub"
   ],
-  phone: "(214) 555-0192",
-  email: "contracts@apexcommercialcleaning.com",
-  websiteUrl: "https://apexcommercialcleaning.com",
-  address: "1400 Main Street, Suite 800, Dallas, TX 75202",
-  licenseNumber: "TX-JAN-2024-98421",
+  phone: "(555) 000-0000",
+  email: "contracts@yourcompany.com",
+  websiteUrl: "https://yourcompany.com",
+  address: "100 Commercial Blvd, Suite 100, City, State 12345",
+  licenseNumber: "LIC-YYYY-00000",
   insuranceCoverage: "$2,000,000 Commercial General Liability & Full Bond",
   primaryAccentColor: "#2563EB", // Royal Corporate Blue
-  foundedYear: "2016",
+  foundedYear: "2020",
   industryStandards: "ISSA 540 Workloading • EPA List N Disinfection",
   qualitySla: "4-hour prompt re-clean response at zero added charge if any area is unsatisfactory.",
   paymentTerms: "Invoiced monthly on Net-30 terms. 12-month standard term with 30-day mutual flexibility.",
-  googleAppsScriptUrl: "https://script.google.com/macros/s/AKfycbxP_7JM9DiCjbIMurFqbhVjFIgt8egv4OLgEe_FmhCGegoUC2ZF5g4lFYTlH3ew-yCnng/exec"
+  googleAppsScriptUrl: "" // Client sets their deployed Google Apps Script Webhook URL
 };
 
 export const defaultPricingParameters: PricingParameters = {

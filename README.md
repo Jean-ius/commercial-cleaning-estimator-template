@@ -7,11 +7,14 @@ Built specifically for commercial cleaning & janitorial business owners or digit
 ---
 
 ## 🌟 Included Features
-
-- **Corporate Authority Website**: Sector-tailored cleaning solutions, ISSA standards badges, trust statistics, and comparison matrix.
-- **Instant Commercial Rate Calculator**: Real-time pricing calibrated to square footage (1,000 – 100,000+ sq ft), 6 facility sectors, 6 cleaning frequencies, and optional specialty add-ons.
-- **Walkthrough Booking Modal**: Directly captures qualified facility manager leads into your own private Google Sheets CRM via automated Webhook.
-- **Commercial Proposal Generator**: Instant, print-ready, 1-page executive Scope of Work proposal with itemized investment schedule and dual signature authorization blocks.
+ 
+- **Internal Sales Opportunities CRM Hub**: Centralized `LeadRecord` architecture, `+ New Lead` modal with progressive disclosure, executive 15-column table, and interactive pipeline stage controls (`NEW` → `QUALIFIED` → `WALKTHROUGH` → `PROPOSAL` → `WON` / `LOST`).
+- **Instant Commercial Rate Calculator**: Real-time pricing calibrated to square footage (1,000 – 100,000+ sq ft), 6 facility sectors, 6 cleaning frequencies, and optional specialty add-ons with active lead context.
+- **ISSA 540 Workloading Engine**: Real-time production rates, labor hour calculations, crew sizing, and price-per-visit breakdown.
+- **Internal Walkthrough Scheduler**: Dedicated scheduling modal updating walkthrough status independently of pipeline state.
+- **Commercial Proposal Generator**: Instant, print-ready, 1-page executive Scope of Work proposal with pre-generation completeness validation and dual signature authorization blocks.
+- **4-Sheet Google Sheets CRM Backend**: In-place updates across `Leads` (15 executive columns), `Lead Details` (full LeadRecord persistence), `Settings`, and `Activity Log` (audit trail).
+- **Corporate Authority Landing Page**: Sector-tailored cleaning solutions, ISSA standards badges, trust statistics, and comparison matrix.
 - **Zero-Database Architecture**: Leads save straight to Google Sheets using Google Apps Script. No monthly database fees or backend maintenance required.
 
 ---
