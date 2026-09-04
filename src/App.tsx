@@ -4,15 +4,13 @@ import {
   EstimateResult, 
   LeadRecord, 
   LeadStatus,
-  ProposalStatus,
   FacilitySectorId,
   FrequencyId,
   AddOnServiceId
 } from './types/cleanCommand';
 import { defaultClientBrand, facilitySectors } from './config/clientConfig';
-import { calculateCommercialEstimate, formatCurrency } from './utils/pricingEngine';
+import { calculateCommercialEstimate } from './utils/pricingEngine';
 import { Navbar } from './components/Navbar';
-import { CorporateLanding } from './components/landing/CorporateLanding';
 import { CommercialProposalGenerator } from './components/proposal/CommercialProposalGenerator';
 import { Toast } from './components/Toast';
 import { Footer } from './components/Footer';
@@ -20,6 +18,8 @@ import { SalesDashboard } from './components/leads/SalesDashboard';
 import { NewLeadModal } from './components/leads/NewLeadModal';
 import { LeadDetailEditModal } from './components/leads/LeadDetailEditModal';
 import { CommercialQuoteCalculator } from './components/calculator/CommercialQuoteCalculator';
+import { SystemSettingsModal } from './components/settings/SystemSettingsModal';
+import { Calculator } from 'lucide-react';
 import { 
   loadLeadsFromGoogleSheets, 
   createLeadInGoogleSheets, 
@@ -31,7 +31,7 @@ import {
 
 export const App: React.FC = () => {
   // Brand Configuration with localStorage sync
-  const [brandConfig] = useState<ClientBrandConfig>(() => {
+  const [brandConfig, setBrandConfig] = useState<ClientBrandConfig>(() => {
     try {
       const saved = localStorage.getItem('cleancommand_brand_config');
       if (saved) {
@@ -47,16 +47,24 @@ export const App: React.FC = () => {
     return defaultClientBrand;
   });
 
-  // Current view: default to internal 'sales' hub for sales team
-  const [currentView, setCurrentView] = useState<'sales' | 'landing' | 'proposal'>('sales');
+  const handleUpdateBrand = (updated: ClientBrandConfig) => {
+    setBrandConfig(updated);
+    try {
+      localStorage.setItem('cleancommand_brand_config', JSON.stringify(updated));
+    } catch (e) {}
+    triggerToast('System & company configuration saved!');
+  };
+
+  // Enterprise Software View Router: 'sales' (Pipeline CRM) | 'estimator' (Bidding Engine) | 'proposal' (Proposal Studio)
+  const [currentView, setCurrentView] = useState<'sales' | 'estimator' | 'proposal'>('sales');
 
   // Leads CRM State: starts empty for clean product template, reloaded from Google Sheets or localStorage
   const [leads, setLeads] = useState<LeadRecord[]>(() => {
     try {
       const cached = localStorage.getItem('cleancommand_leads_cache');
-      if (cached) {
+      if (cached !== null) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
     return [];
@@ -72,6 +80,7 @@ export const App: React.FC = () => {
   // Modal controls
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
   const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<LeadRecord | null>(null);
   const [initialSpecsForNewLead, setInitialSpecsForNewLead] = useState<{
     squareFootage?: number;
@@ -121,7 +130,7 @@ export const App: React.FC = () => {
         const res = await loadLeadsFromGoogleSheets(brandConfig.googleAppsScriptUrl);
         if (isMounted) {
           if (res.mode === 'live') {
-            // Google Sheets is authoritative
+            // Google Sheets is authoritative source of truth
             setLeads(res.leads);
             if (res.leads.length === 0) {
               setActiveLead(null);
@@ -179,28 +188,8 @@ export const App: React.FC = () => {
       throw new Error(createRes.error || 'Failed to create lead in Google Sheets.');
     }
 
+    // 3. Confirm creation and obtain confirmed Lead ID
     const confirmedLeadId = createRes.leadId || newLead.leadId;
-
-    // 3. If an estimate was attached, save estimate specifically with the confirmed Lead ID
-    if (newLead.estimateSnapshot) {
-      try {
-        await saveEstimateToGoogleSheets(confirmedLeadId, {
-          estimatedValue: newLead.estimateSnapshot.annualContractValue,
-          monthlyEstimate: newLead.estimateSnapshot.totalEstimatedMonthlyInvestment,
-          ratePerVisit: newLead.estimateSnapshot.pricePerVisit,
-          annualContractValue: newLead.estimateSnapshot.annualContractValue,
-          estimatedLaborHours: newLead.estimateSnapshot.hoursPerCleaningVisit,
-          recommendedCrewSize: newLead.estimateSnapshot.recommendedCrewSize,
-          squareFootage: newLead.squareFootage,
-          facilityType: newLead.facilityType,
-          cleaningFrequency: newLead.cleaningFrequency,
-          selectedAddOns: newLead.selectedAddOns,
-          status: 'Estimating'
-        }, brandConfig.googleAppsScriptUrl);
-      } catch (estErr: any) {
-        console.warn('Lead created but estimate save encountered warning:', estErr);
-      }
-    }
 
     // 4. Refresh full leads dataset from Google Sheets to confirm complete persistence
     let finalLead: LeadRecord = { ...newLead, leadId: confirmedLeadId };
@@ -286,7 +275,7 @@ export const App: React.FC = () => {
         status: targetLead.status === 'New' ? 'Estimating' : targetLead.status
       }, brandConfig.googleAppsScriptUrl);
 
-      // 2. Reconcile / Refresh directly from Google Sheets (MANDATORY REQUIREMENT 8)
+      // 2. Reconcile / Refresh directly from Google Sheets
       let refreshedLead: LeadRecord | undefined;
       try {
         const fresh = await loadLeadsFromGoogleSheets(brandConfig.googleAppsScriptUrl);
@@ -304,49 +293,54 @@ export const App: React.FC = () => {
       } : {
         ...targetLead,
         squareFootage: facilitySpecs.squareFootage,
-        facilityType: facilitySpecs.facilityType,
         cleaningFrequency: facilitySpecs.cleaningFrequency,
+        facilityType: facilitySpecs.facilityType,
         selectedAddOns: facilitySpecs.selectedAddOns,
+        monthlyEstimate: estimate.totalEstimatedMonthlyInvestment,
         estimatedValue: estimate.annualContractValue,
-        ratePerVisit: estimate.pricePerVisit,
         annualContractValue: estimate.annualContractValue,
-        estimatedLaborHours: estimate.hoursPerCleaningVisit,
-        recommendedCrewSize: estimate.recommendedCrewSize,
-        estimateSnapshot: estimate,
-        status: targetLead.status === 'New' ? 'Estimating' : targetLead.status,
-        updatedDate: new Date().toISOString().split('T')[0],
+        ratePerVisit: estimate.pricePerVisit,
+        status: (targetLead.status === 'New' ? 'Estimating' : (targetLead.status || 'Estimating')) as LeadStatus,
         lastUpdated: new Date().toISOString().split('T')[0],
-        monthlyEstimate: estimate.totalEstimatedMonthlyInvestment
+        estimateSnapshot: estimate
       };
 
+      setLeads(prev => prev.map(l => l.leadId === targetLead.leadId ? updatedLead : l));
       setActiveLead(updatedLead);
       setActiveEstimate(estimate);
-      if (!refreshedLead) {
-        setLeads(prev => prev.map(l => l.leadId === updatedLead.leadId ? updatedLead : l));
+      triggerToast(`Successfully saved estimate to ${targetLead.companyName} in Google Sheets!`);
+    } catch (err: any) {
+      console.error('Failed to save estimate to lead in Google Sheets:', err);
+      throw new Error(err?.message || 'Failed to save estimate to Google Sheets.');
+    }
+  };
+
+  const handleUpdateStatus = async (leadId: string, newStatus: LeadStatus) => {
+    try {
+      await updateStatusInGoogleSheets(leadId, newStatus, undefined, brandConfig.googleAppsScriptUrl);
+      setLeads(prev => prev.map(l => l.leadId === leadId ? { ...l, status: newStatus } : l));
+      if (activeLead && activeLead.leadId === leadId) {
+        setActiveLead(prev => prev ? { ...prev, status: newStatus } : null);
       }
-
-      // 3. Show success ONLY after successful synchronization (MANDATORY REQUIREMENT 9)
-      triggerToast(`Saved estimate ($${formatCurrency(estimate.totalEstimatedMonthlyInvestment)}/mo) to ${updatedLead.companyName} (${updatedLead.leadId}) in Google Sheets!`);
-    } catch (e: any) {
-      triggerToast(`Failed to save estimate to Google Sheets: ${e?.message || 'Error'}`);
-      throw e;
+      try {
+        const fresh = await loadLeadsFromGoogleSheets(brandConfig.googleAppsScriptUrl);
+        if (fresh.mode === 'live') {
+          setLeads(fresh.leads);
+        }
+      } catch {}
+      triggerToast(`Updated ${leadId} status to ${newStatus}`);
+    } catch (err) {
+      setLeads(prev => prev.map(l => l.leadId === leadId ? { ...l, status: newStatus } : l));
+      triggerToast(`Status updated locally (Google Sheets sync pending)`);
     }
   };
 
-  const handleSaveEstimate = async (
-    estimate: EstimateResult,
-    facilitySpecs: {
-      squareFootage: number;
-      facilityType: FacilitySectorId;
-      cleaningFrequency: FrequencyId;
-      selectedAddOns: AddOnServiceId[];
-    }
-  ) => {
-    if (!activeLead) return;
-    await handleSaveEstimateToLead(activeLead.leadId, estimate, facilitySpecs);
+  // Estimator Action Handlers
+  const handleSaveEstimate = (estimate: EstimateResult) => {
+    setActiveEstimate(estimate);
+    triggerToast('Estimate calculation saved to active session!');
   };
 
-  // Convert estimate to a new lead with all pre-filled estimator information
   const handleSaveAsNewLead = (
     estimate: EstimateResult,
     facilitySpecs: {
@@ -356,106 +350,53 @@ export const App: React.FC = () => {
       selectedAddOns: AddOnServiceId[];
     }
   ) => {
-    setActiveEstimate(estimate);
-    const sectorObj = facilitySectors.find(s => s.id === facilitySpecs.facilityType);
-    const sectorLabel = sectorObj ? sectorObj.name : 'Commercial Office';
-    const addOnList = facilitySpecs.selectedAddOns.length > 0
-      ? `Add-ons: ${facilitySpecs.selectedAddOns.join(', ')}`
-      : '';
-    const summaryNotes = `Commercial cleaning estimate: ${facilitySpecs.squareFootage.toLocaleString()} sq ft, ${facilitySpecs.cleaningFrequency}. ${addOnList}`;
-
     setInitialSpecsForNewLead({
       squareFootage: facilitySpecs.squareFootage,
       facilityType: facilitySpecs.facilityType,
       cleaningFrequency: facilitySpecs.cleaningFrequency,
+      selectedAddOns: facilitySpecs.selectedAddOns,
       estimatedValue: estimate.annualContractValue,
       monthlyEstimate: estimate.totalEstimatedMonthlyInvestment,
       ratePerVisit: estimate.pricePerVisit,
-      selectedAddOns: facilitySpecs.selectedAddOns,
-      propertyType: sectorLabel,
-      specialRequirements: addOnList,
-      notes: summaryNotes,
+      propertyType: facilitySectors.find(s => s.id === facilitySpecs.facilityType)?.name || 'Commercial Facility',
       estimateSnapshot: estimate
     });
     setIsNewLeadModalOpen(true);
   };
 
-  // Save calculation standalone without any lead (WORKFLOW 3)
   const handleSaveStandalone = (estimate: EstimateResult) => {
     setActiveEstimate(estimate);
-    setActiveLead(null);
-    triggerToast(`Estimate saved standalone ($${formatCurrency(estimate.totalEstimatedMonthlyInvestment)}/mo). Ready for proposal.`);
+    triggerToast('Saved as Standalone Commercial Estimate!');
   };
 
-  // Reset/Clear active lead so user can start an independent estimate for another company
   const handleClearActiveLead = () => {
     setActiveLead(null);
-    triggerToast('Cleared active lead. Ready for a new blank estimate.');
-  };
-
-  const handleUpdateStatus = async (leadId: string, newStatus: LeadStatus) => {
-    const lead = leads.find(l => l.leadId === leadId);
-    const prevStatus = lead?.status;
-
-    try {
-      await updateStatusInGoogleSheets(leadId, newStatus, prevStatus, brandConfig.googleAppsScriptUrl);
-
-      setLeads(prev => prev.map(l => l.leadId === leadId ? { 
-        ...l, 
-        status: newStatus, 
-        updatedDate: new Date().toISOString().split('T')[0],
-        lastUpdated: new Date().toISOString() 
-      } : l));
-
-      if (activeLead && activeLead.leadId === leadId) {
-        setActiveLead(prev => prev ? { 
-          ...prev, 
-          status: newStatus, 
-          updatedDate: new Date().toISOString().split('T')[0],
-          lastUpdated: new Date().toISOString() 
-        } : null);
-      }
-
-      triggerToast(`Lead ${leadId} status set to ${newStatus} in Google Sheets!`);
-    } catch (e: any) {
-      triggerToast(`Failed to update status in Google Sheets: ${e?.message || 'Error'}`);
-    }
-  };
-
-  const handleSaveProposal = async (proposalInfo: {
-    proposalId: string;
-    proposalStatus: ProposalStatus;
-    proposalIssueDate: string;
-    proposalValidThrough: string;
-  }) => {
-    if (!activeLead) return;
-
-    const updatedLead: LeadRecord = {
-      ...activeLead,
-      proposalId: proposalInfo.proposalId,
-      proposalStatus: proposalInfo.proposalStatus,
-      proposalIssueDate: proposalInfo.proposalIssueDate,
-      proposalValidThrough: proposalInfo.proposalValidThrough,
-      status: 'Quoted',
-      updatedDate: new Date().toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString()
-    };
-
-    setActiveLead(updatedLead);
-    setLeads(prev => prev.map(l => l.leadId === updatedLead.leadId ? updatedLead : l));
-    triggerToast(`Proposal ${proposalInfo.proposalId} registered to ${updatedLead.companyName}`);
-
-    try {
-      await updateProposalInGoogleSheets(updatedLead.leadId, proposalInfo, brandConfig.googleAppsScriptUrl);
-    } catch (e) {
-      console.warn('Failed to update proposal in Google Sheets:', e);
-    }
+    triggerToast('Cleared active lead context. Estimator operating in standalone mode.');
   };
 
   const handleOpenProposalGenerator = (estimate: EstimateResult) => {
     setActiveEstimate(estimate);
-    setToastVisible(false);
     setCurrentView('proposal');
+  };
+
+  const handleSaveProposal = async (proposalData: any) => {
+    if (activeLead) {
+      try {
+        await updateProposalInGoogleSheets(activeLead.leadId, proposalData.id, brandConfig.googleAppsScriptUrl);
+        const updatedLead: LeadRecord = {
+          ...activeLead,
+          proposalId: proposalData.id,
+          status: 'Quoted',
+          lastUpdated: new Date().toISOString().split('T')[0]
+        };
+        setLeads(prev => prev.map(l => l.leadId === activeLead.leadId ? updatedLead : l));
+        setActiveLead(updatedLead);
+        triggerToast(`Proposal ${proposalData.id} attached to ${activeLead.companyName}!`);
+      } catch (err) {
+        console.warn('Proposal sync failed:', err);
+      }
+    }
+    triggerToast('Proposal ready for client printing or PDF delivery!');
   };
 
   const handleOpenEstimatorForLead = (lead: LeadRecord) => {
@@ -467,12 +408,7 @@ export const App: React.FC = () => {
       lead.selectedAddOns || []
     );
     setActiveEstimate(est);
-    setCurrentView('sales');
-    // Smooth scroll down to estimator section
-    setTimeout(() => {
-      const el = document.getElementById('estimator');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    setCurrentView('estimator');
   };
 
   const handleOpenProposalForLead = (lead: LeadRecord) => {
@@ -495,25 +431,27 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
-      {/* 1. Top Navigation Bar */}
+      {/* 1. Enterprise App Navigation Bar */}
       {currentView !== 'proposal' && (
         <Navbar
           currentView={currentView}
-          onNavigate={(view) => setCurrentView(view as 'sales' | 'landing' | 'proposal')}
+          onNavigate={(view) => setCurrentView(view)}
           brandConfig={brandConfig}
-          isProductionMode={true}
           onOpenNewLeadModal={() => {
             setInitialSpecsForNewLead(undefined);
             setIsNewLeadModalOpen(true);
           }}
+          onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+          onSyncFromGoogleSheets={handleSyncFromGoogleSheets}
+          isSyncing={isSyncing}
           leadCount={leads.length}
         />
       )}
 
-      {/* 2. Main View Router */}
+      {/* 2. Main System Modules */}
       <main className="flex-1">
         
-        {/* VIEW 1: Internal Sales Hub & Integrated Estimator */}
+        {/* MODULE 1: Pipeline CRM Dashboard */}
         {currentView === 'sales' && (
           <div className="space-y-8 pb-16">
             <SalesDashboard
@@ -538,9 +476,40 @@ export const App: React.FC = () => {
               onOpenProposalForLead={handleOpenProposalForLead}
               onUpdateStatus={handleUpdateStatus}
             />
+          </div>
+        )}
 
-            {/* Integrated Estimator (connects to activeLead or operates standalone) */}
-            <div className="border-t border-slate-200 pt-4 bg-slate-50/60">
+        {/* MODULE 2: Dedicated Bidding & Rate Estimator Workspace */}
+        {currentView === 'estimator' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-16">
+            {/* Header banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 mb-1.5">
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>ISSA 540 Workloading Engine</span>
+                </div>
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  Commercial Janitorial Rate Estimator
+                </h1>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Calculate square footage production rates, labor hours, crew sizing, and gross margins for {brandConfig.companyName}.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('sales')}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  ← Back to Pipeline CRM
+                </button>
+              </div>
+            </div>
+
+            {/* Estimator Engine Card */}
+            <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
               <CommercialQuoteCalculator
                 brandConfig={brandConfig}
                 activeLead={activeLead}
@@ -556,15 +525,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* VIEW 2: Corporate Public Authority Landing */}
-        {currentView === 'landing' && (
-          <CorporateLanding
-            brandConfig={brandConfig}
-            onOpenProposalGenerator={handleOpenProposalGenerator}
-          />
-        )}
-
-        {/* VIEW 3: Professional A4 Proposal Generator & Print Document */}
+        {/* MODULE 3: Professional A4 Proposal Studio & Print Document */}
         {currentView === 'proposal' && (
           <CommercialProposalGenerator
             estimate={activeEstimate}
@@ -576,11 +537,10 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* 3. Footer (Hidden on Proposal View) */}
+      {/* 3. Enterprise Software Status Bar (Hidden on Proposal View) */}
       {currentView !== 'proposal' && (
         <Footer
           brandConfig={brandConfig}
-          onNavigate={(view) => setCurrentView(view as any)}
         />
       )}
 
@@ -603,6 +563,13 @@ export const App: React.FC = () => {
         onSaveLead={handleUpdateLead}
         onOpenEstimatorForLead={handleOpenEstimatorForLead}
         onOpenProposalForLead={handleOpenProposalForLead}
+      />
+
+      <SystemSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        brandConfig={brandConfig}
+        onSaveConfig={handleUpdateBrand}
       />
 
       {/* 5. Toast Feedback */}

@@ -1,13 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Phone } from 'lucide-react';
+import React from 'react';
+import { 
+  BarChart3, 
+  Calculator, 
+  FileText, 
+  Settings, 
+  Plus, 
+  RefreshCw, 
+  UserCheck
+} from 'lucide-react';
 import { ClientBrandConfig } from '../types/cleanCommand';
 
+export type SystemViewMode = 'sales' | 'estimator' | 'proposal' | 'settings';
+
 interface NavbarProps {
-  currentView: 'landing' | 'proposal' | 'packages' | 'sales';
-  onNavigate: (view: 'landing' | 'proposal' | 'packages' | 'sales') => void;
+  currentView: 'sales' | 'estimator' | 'proposal';
+  onNavigate: (view: 'sales' | 'estimator' | 'proposal') => void;
   brandConfig: ClientBrandConfig;
-  isProductionMode?: boolean;
   onOpenNewLeadModal?: () => void;
+  onOpenSettingsModal?: () => void;
+  onSyncFromGoogleSheets?: () => void;
+  isSyncing?: boolean;
   leadCount?: number;
 }
 
@@ -15,172 +27,147 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onNavigate,
   brandConfig,
-  isProductionMode = false,
   onOpenNewLeadModal,
+  onOpenSettingsModal,
+  onSyncFromGoogleSheets,
+  isSyncing = false,
   leadCount = 0
 }) => {
-  const [activeSection, setActiveSection] = useState<'services' | 'estimator' | 'packages' | 'sales'>('sales');
-
-  // ScrollSpy to track if user scrolled into the estimator or services
-  useEffect(() => {
-    if (currentView === 'packages') {
-      setActiveSection('packages');
-      return;
-    }
-    if (currentView === 'sales') {
-      setActiveSection('sales');
-      return;
-    }
-
-    if (currentView !== 'landing') return;
-
-    const handleScroll = () => {
-      const estimatorEl = document.getElementById('estimator');
-      if (estimatorEl) {
-        const rect = estimatorEl.getBoundingClientRect();
-        if (rect.top <= 200 && rect.bottom >= 150) {
-          setActiveSection('estimator');
-          return;
-        }
-      }
-      if (window.scrollY < 400) {
-        setActiveSection('services');
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [currentView]);
-
-  const handleNavClick = (section: 'services' | 'estimator' | 'packages' | 'sales') => {
-    setActiveSection(section);
-
-    if (section === 'sales') {
-      onNavigate('sales');
-    } else if (section === 'services') {
-      if (currentView !== 'landing') {
-        onNavigate('landing');
-        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    } else if (section === 'estimator') {
-      if (currentView !== 'landing') {
-        onNavigate('landing');
-        setTimeout(() => {
-          const el = document.getElementById('estimator');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      } else {
-        const el = document.getElementById('estimator');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }
-    } else if (section === 'packages') {
-      onNavigate('packages');
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs transition-all duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* Brand Logo & Name */}
+        {/* Left: Brand Identity & Software Suite Title */}
         <div 
-          onClick={() => handleNavClick('sales')}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          onClick={() => onNavigate('sales')}
+          className="flex items-center gap-3 cursor-pointer select-none group"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-base shadow-md group-hover:scale-105 transition-transform">
-            {brandConfig.companyName.charAt(0)}
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-slate-900 text-white flex items-center justify-center font-extrabold text-base shadow-sm group-hover:scale-105 transition-transform">
+            {brandConfig.companyName ? brandConfig.companyName.charAt(0) : 'A'}
           </div>
           <div>
-            <span className="font-extrabold text-slate-900 text-base tracking-tight block leading-tight">
-              {brandConfig.companyName}
-            </span>
-            <span className="text-[11px] text-slate-500 font-medium">
-              Commercial Sales Hub • {brandConfig.primaryCity}
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-slate-900 text-base tracking-tight block leading-tight">
+                {brandConfig.companyName}
+              </span>
+              <span className="hidden sm:inline-block font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
+                Enterprise OS
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+              <span>Commercial Bidding &amp; Operations</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-semibold">{brandConfig.primaryCity}</span>
             </span>
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 border border-slate-200/90 rounded-full p-1 text-xs">
+        {/* Center: System Modules Switcher */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-100/90 border border-slate-200/90 rounded-2xl p-1 text-xs">
           <button
-            onClick={() => handleNavClick('sales')}
-            className={`px-4 py-1.5 rounded-full font-medium transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+            type="button"
+            onClick={() => onNavigate('sales')}
+            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
               currentView === 'sales'
-                ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <span>Sales Hub</span>
+            <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+            <span>Pipeline CRM</span>
             {leadCount > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                currentView === 'sales' ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-700'
-              }`}>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-100 text-blue-700">
                 {leadCount}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => handleNavClick('estimator')}
-            className={`px-4 py-1.5 rounded-full font-medium transition-all duration-200 cursor-pointer ${
-              currentView === 'landing' && activeSection === 'estimator'
-                ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+            type="button"
+            onClick={() => onNavigate('estimator')}
+            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentView === 'estimator'
+                ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            Rate Estimator
+            <Calculator className="w-3.5 h-3.5 text-blue-600" />
+            <span>Bidding Estimator</span>
           </button>
 
           <button
-            onClick={() => handleNavClick('services')}
-            className={`px-4 py-1.5 rounded-full font-medium transition-all duration-200 cursor-pointer ${
-              currentView === 'landing' && activeSection === 'services'
-                ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+            type="button"
+            onClick={() => onNavigate('proposal')}
+            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all duration-150 cursor-pointer flex items-center gap-1.5 ${
+              currentView === 'proposal'
+                ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            Services &amp; Standards
+            <FileText className="w-3.5 h-3.5 text-blue-600" />
+            <span>Proposal Studio</span>
           </button>
 
-          {/* System Packages is only visible during Sales / Agency Pitch Mode */}
-          {!isProductionMode && (
+          {onOpenSettingsModal && (
             <button
-              onClick={() => handleNavClick('packages')}
-              className={`px-4 py-1.5 rounded-full font-medium transition-all duration-200 cursor-pointer ${
-                currentView === 'packages'
-                  ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
-              }`}
+              type="button"
+              onClick={onOpenSettingsModal}
+              title="System Configuration"
+              className="px-2.5 py-1.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-white/60 transition-colors cursor-pointer"
             >
-              Packages ($1k–$5k)
+              <Settings className="w-3.5 h-3.5" />
             </button>
           )}
         </nav>
 
-        {/* Action CTAs */}
-        <div className="flex items-center gap-3">
-          <a
-            href={`tel:${brandConfig.phone.replace(/[^0-9+]/g, '')}`}
-            className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-blue-600 transition-colors"
-          >
-            <Phone className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{brandConfig.phone}</span>
-          </a>
+        {/* Right: Live Google Sheet Sync & Quick Actions */}
+        <div className="flex items-center gap-2.5">
+          {/* Live Google Sheet Status */}
+          {onSyncFromGoogleSheets && (
+            <button
+              type="button"
+              onClick={onSyncFromGoogleSheets}
+              disabled={isSyncing}
+              title="Sync latest rows from Google Sheets"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/90 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3 h-3 text-blue-600 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="text-[11px] font-bold">
+                {isSyncing ? 'Syncing...' : 'Sheet Active'}
+              </span>
+            </button>
+          )}
 
+          {/* New Lead CTA */}
           {onOpenNewLeadModal && (
             <button
+              type="button"
               onClick={onOpenNewLeadModal}
-              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
             >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>+ New Lead</span>
             </button>
           )}
+
+          {/* Operator Profile Pill */}
+          <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+              <UserCheck className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="text-left">
+              <span className="block text-[11px] font-bold text-slate-800 leading-tight">
+                Estimator
+              </span>
+              <span className="block text-[9px] text-emerald-600 font-semibold leading-tight flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                Online
+              </span>
+            </div>
+          </div>
         </div>
 
       </div>
     </header>
   );
 };
-
