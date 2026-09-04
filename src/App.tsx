@@ -263,7 +263,7 @@ export const App: React.FC = () => {
   }, [currentView]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
       {/* 1. Top Navigation Bar */}
       {currentView !== 'proposal' && (
@@ -302,7 +302,7 @@ export const App: React.FC = () => {
             />
 
             {/* Integrated Estimator connected directly to activeLead */}
-            <div className="border-t border-slate-800/80 pt-4 bg-slate-900/40">
+            <div className="border-t border-slate-200 pt-4 bg-slate-50/60">
               <CommercialQuoteCalculator
                 brandConfig={brandConfig}
                 activeLead={activeLead}
