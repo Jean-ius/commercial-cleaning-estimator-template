@@ -55,13 +55,11 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
 
           <p className="mt-6 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-normal">
             {brandConfig.companyName} delivers certified medical-grade disinfection, dedicated night supervision, and transparent square-footage pricing for commercial property managers across {brandConfig.primaryCity}.
-          </p>
-
-          {/* Direct Actions */}
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+          </p>          {/* Direct Actions */}
+          <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
             <a
               href="#estimator"
-              className="flex items-center gap-2 px-7 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer min-h-[44px]"
             >
               <span>Instant Square-Footage Estimator</span>
               <ArrowRight className="w-4 h-4" />
@@ -69,7 +67,7 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
 
             <a
               href={`tel:${brandConfig.phone.replace(/[^0-9+]/g, '')}`}
-              className="flex items-center gap-2.5 px-6 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-semibold text-sm shadow-sm transition-all hover:border-slate-300"
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-semibold text-sm shadow-sm transition-all hover:border-slate-300 min-h-[44px]"
             >
               <Phone className="w-4 h-4 text-emerald-600" />
               <span>Call Operations: {brandConfig.phone}</span>
@@ -77,22 +75,22 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
           </div>
 
           {/* Mini Trust Stats Card Grid */}
-          <div className="mt-14 pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div className="p-4 rounded-xl clean-card">
-              <span className="block text-2xl font-extrabold text-slate-900 font-mono tracking-tight">100%</span>
-              <span className="text-xs text-slate-500 mt-0.5 block font-medium">Background Vetted Crew</span>
+          <div className="mt-14 pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
+            <div className="p-3.5 sm:p-4 rounded-xl clean-card">
+              <span className="block text-xl sm:text-2xl font-extrabold text-slate-900 font-mono tracking-tight">100%</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 mt-0.5 block font-medium">Background Vetted Crew</span>
             </div>
-            <div className="p-4 rounded-xl clean-card">
-              <span className="block text-2xl font-extrabold text-slate-900 font-mono tracking-tight">&lt; 2hr</span>
-              <span className="text-xs text-slate-500 mt-0.5 block font-medium">Supervisor SLA Response</span>
+            <div className="p-3.5 sm:p-4 rounded-xl clean-card">
+              <span className="block text-xl sm:text-2xl font-extrabold text-slate-900 font-mono tracking-tight">&lt; 2hr</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 mt-0.5 block font-medium">Supervisor SLA Response</span>
             </div>
-            <div className="p-4 rounded-xl clean-card">
-              <span className="block text-2xl font-extrabold text-slate-900 font-mono tracking-tight">ISSA 540</span>
-              <span className="text-xs text-slate-500 mt-0.5 block font-medium">Standardized Workloading</span>
+            <div className="p-3.5 sm:p-4 rounded-xl clean-card">
+              <span className="block text-xl sm:text-2xl font-extrabold text-slate-900 font-mono tracking-tight">ISSA 540</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 mt-0.5 block font-medium">Standardized Workloading</span>
             </div>
-            <div className="p-4 rounded-xl clean-card">
-              <span className="block text-2xl font-extrabold text-slate-900 font-mono tracking-tight">Net-30</span>
-              <span className="text-xs text-slate-500 mt-0.5 block font-medium">Corporate Invoicing</span>
+            <div className="p-3.5 sm:p-4 rounded-xl clean-card">
+              <span className="block text-xl sm:text-2xl font-extrabold text-slate-900 font-mono tracking-tight">Net-30</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 mt-0.5 block font-medium">Corporate Invoicing</span>
             </div>
           </div>
         </div>
@@ -151,12 +149,12 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
       </section>
 
       {/* 3. The Core Interactive Estimator Section */}
-      <div className="relative">
+      <section id="estimator" className="relative scroll-mt-20">
         <CommercialQuoteCalculator
           brandConfig={brandConfig}
           onOpenProposalGenerator={onOpenProposalGenerator}
         />
-      </div>
+      </section>
 
       {/* 4. Comparison Matrix: Franchise Cleaners vs CleanCommand Pro System */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -173,12 +171,13 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
           </p>
         </div>
 
-        <div className="clean-card rounded-2xl overflow-hidden max-w-4xl mx-auto shadow-md">
-          <div className="grid grid-cols-3 bg-slate-100 p-4 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
-            <span className="text-slate-700">Operational Standard</span>
-            <span className="text-rose-600 text-center">Budget Franchise Cleaners</span>
-            <span className="text-blue-700 text-center">{brandConfig.companyName}</span>
-          </div>
+        <div className="w-full overflow-x-auto mobile-scroll-container pb-2">
+          <div className="clean-card rounded-2xl overflow-hidden max-w-4xl mx-auto shadow-md min-w-[580px] sm:min-w-0">
+            <div className="grid grid-cols-3 bg-slate-100 p-4 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
+              <span className="text-slate-700">Operational Standard</span>
+              <span className="text-rose-600 text-center">Budget Franchise Cleaners</span>
+              <span className="text-blue-700 text-center">{brandConfig.companyName}</span>
+            </div>
 
           <div className="divide-y divide-slate-100 text-xs">
             <div className="grid grid-cols-3 p-4 items-center hover:bg-slate-50 transition-colors">
@@ -235,6 +234,7 @@ export const CorporateLanding: React.FC<CorporateLandingProps> = ({
               </span>
             </div>
           </div>
+        </div>
         </div>
       </section>
 

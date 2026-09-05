@@ -654,15 +654,15 @@ export const App: React.FC = () => {
 
         {/* MODULE 2: Dedicated Bidding & Rate Estimator Workspace */}
         {currentView === 'estimator' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-16">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-16">
             {/* Header banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 mb-1.5">
                   <Calculator className="w-3.5 h-3.5" />
                   <span>ISSA 540 Workloading Engine</span>
                 </div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                   Commercial Janitorial Rate Estimator
                 </h1>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -670,11 +670,11 @@ export const App: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => navigateToView('sales')}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer min-h-[40px] flex items-center justify-center"
                 >
                   ← Back to Pipeline CRM
                 </button>
@@ -682,7 +682,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Estimator Engine Card */}
-            <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-xs overflow-hidden">
               <CommercialQuoteCalculator
                 brandConfig={brandConfig}
                 activeLead={activeLead}
